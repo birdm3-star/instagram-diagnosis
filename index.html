@@ -46,6 +46,12 @@
     <p>IQ（論理）・ストーリー化（伝達）・EQ（共感）の3領域から、あなたの強みタイプを判定します。</p>
   </header>
 
+  <noscript>
+    <div style="max-width:900px;margin:16px auto;padding:12px;border-radius:12px;background:#fee2e2;color:#7f1d1d;border:1px solid #fecaca">
+      お使いのブラウザで JavaScript が無効になっているため、診断が表示できません。設定で JavaScript を有効にしてください。
+    </div>
+  </noscript>
+
   <div class="container">
     <div class="card">
       <div class="muted">回答方式：はい＝1点、どちらかといえばはい＝0.5点、いいえ＝0点</div>
@@ -86,6 +92,9 @@
   </div>
 
   <script>
+  // DOM構築後に初期化（読み込み順の不具合対策）
+  document.addEventListener('DOMContentLoaded', function(){
+
     // ====== 質問データ ======
     const data = [
       {
@@ -143,7 +152,7 @@
     // ====== 質問の描画 ======
     function render(){
       quiz.innerHTML = '';
-      data.forEach((sec, idx) => {
+      data.forEach((sec) => {
         const wrap = document.createElement('section');
         wrap.className = 'section card';
         wrap.innerHTML = `<h2>${sec.title}</h2>`;
@@ -232,11 +241,9 @@
       // 1) トップが7点以上 & 他より高い → そのタイプ
       // 2) 3領域が±1.0点以内で拮抗（かつ各5点以上）→ バランス型
       // 3) 上記以外 → デベロップ型
-      const maxVal = top.val;
-      const minVal = third.val;
       const closeAll = (Math.abs(IQ-ST) <= 1 && Math.abs(ST-EQ) <= 1 && Math.abs(IQ-EQ) <= 1);
 
-      if(maxVal >= 7 && diffTopSecond > 0){
+      if(top.val >= 7 && diffTopSecond > 0){
         return { kind: top.key, meta: types[top.key] };
       } else if(closeAll && IQ >= 5 && ST >= 5 && EQ >= 5){
         return { kind: 'BAL', meta: types.BAL };
@@ -266,7 +273,7 @@
       card.scrollIntoView({behavior:'smooth'});
     }
 
-    // ====== イベント ======
+    // ====== ボタンイベント ======
     document.getElementById('submitBtn').addEventListener('click', () => {
       const {scores, totalCount} = calcScores();
       const totalQuestions = data.reduce((a,s)=>a+s.items.length,0);
@@ -306,42 +313,46 @@
       });
     });
 
-    // 結果画像化（簡易実装：HTML2Canvasを使わない軽量版：新規ウィンドウへ印刷用デザイン生成）
+    // 結果画像化（内側HTMLに<script>を書かない版）
     document.getElementById('exportBtn').addEventListener('click', ()=>{
       const {scores} = calcScores();
       const d = decideType(scores);
       const html = `
-        <html><head><meta charset='utf-8'><title>結果画像</title>
+        <html><head><meta charset="utf-8"><title>結果画像</title>
         <style>
-          body{margin:0;display:grid;place-items:center;background:#0b1220;color:#fff;font-family:system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, \"Hiragino Kaku Gothic ProN\", \"Yu Gothic UI\", \"YuGothic\", \"Noto Sans JP\", sans-serif}
-          .img{width:1080px;height:1920px;background:linear-gradient(160deg,#111827,#0b1220);padding:80px 64px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between}
+          body{margin:0;display:grid;place-items:center;background:#0b1220;color:#fff;
+               font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,
+               "Hiragino Kaku Gothic ProN","Yu Gothic UI","YuGothic","Noto Sans JP",sans-serif}
+          .img{width:1080px;height:1920px;background:linear-gradient(160deg,#111827,#0b1220);
+               padding:80px 64px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between}
           .title{font-size:56px;line-height:1.15;margin:0}
           .copy{font-size:36px;opacity:.9;margin:0}
-          .pill{display:inline-block;border:1px solid #7aa2ff;border-radius:999px;padding:10px 16px;margin-right:10px;margin-top:10px}
+          .pill{display:inline-block;border:1px solid #7aa2ff;border-radius:999px;
+                padding:10px 16px;margin-right:10px;margin-top:10px}
           .footer{opacity:.7}
         </style></head>
-        <body>
-          <div class='img'>
+        <body onload="window.print()">
+          <div class="img">
             <div>
-              <h1 class='title'>括的能力評価チェック</h1>
-              <h2 class='copy'>${d.meta.title}</h2>
-              <p class='copy'>「${d.meta.copy}」</p>
+              <h1 class="title">括的能力評価チェック</h1>
+              <h2 class="copy">${d.meta.title}</h2>
+              <p class="copy">「${d.meta.copy}」</p>
             </div>
             <div>
-              <div class='pill'>IQ：${scores.IQ.toFixed(1)} / 10</div>
-              <div class='pill'>ストーリー化：${scores.ST.toFixed(1)} / 10</div>
-              <div class='pill'>EQ：${scores.EQ.toFixed(1)} / 10</div>
+              <div class="pill">IQ：${scores.IQ.toFixed(1)} / 10</div>
+              <div class="pill">ストーリー化：${scores.ST.toFixed(1)} / 10</div>
+              <div class="pill">EQ：${scores.EQ.toFixed(1)} / 10</div>
             </div>
-            <div class='footer'>#診断 #自己理解 | © 2025</div>
+            <div class="footer">#診断 #自己理解 | © 2025</div>
           </div>
-          <script>window.onload=()=>window.print()</script>
         </body></html>`;
       const w = window.open('', '_blank');
       w.document.open();
       w.document.write(html);
       w.document.close();
     });
+
+  }); // DOMContentLoaded
   </script>
 </body>
 </html>
-
