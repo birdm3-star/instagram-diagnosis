@@ -1,1 +1,347 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>括的能力評価チェック｜タイプ診断</title>
+  <meta name="description" content="IQ・ストーリー化・EQの3領域から強みタイプを判定する診断アプリ" />
+  <meta property="og:title" content="括的能力評価チェック｜タイプ診断" />
+  <meta property="og:description" content="IQ・ストーリー化・EQの3領域から強みタイプを判定" />
+  <meta property="og:type" content="website" />
+  <meta name="format-detection" content="telephone=no" />
+  <style>
+    :root{--bg:#0f172a;--card:#111827;--muted:#94a3b8;--text:#f8fafc;--accent:#22c55e;--accent-2:#60a5fa;--danger:#ef4444}
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:linear-gradient(120deg,#0b1220,#0f172a 40%,#0b1220);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Hiragino Kaku Gothic ProN","Yu Gothic UI","YuGothic","Noto Sans JP",sans-serif}
+    header{padding:28px 16px;text-align:center}
+    header h1{font-size:clamp(22px,3vw,32px);margin:0 0 8px}
+    header p{margin:0;color:var(--muted)}
+    .container{max-width:900px;margin:0 auto;padding:16px}
+    .card{background:rgba(17,24,39,.7);backdrop-filter:blur(6px);border:1px solid rgba(148,163,184,.15);border-radius:20px;padding:20px;margin:16px 0}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+    .section{grid-column:span 12}
+    @media(min-width:800px){.section{grid-column:span 6}}
+    h2{font-size:20px;margin:0 0 12px}
+    .q{padding:12px;border-radius:12px;border:1px solid rgba(148,163,184,.15);margin-bottom:10px}
+    .q p{margin:0 0 10px}
+    .choices{display:flex;gap:10px;flex-wrap:wrap}
+    .choices label{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border-radius:999px;border:1px solid rgba(148,163,184,.25);cursor:pointer}
+    input[type=radio]{accent-color:#22c55e}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+    button{appearance:none;border:none;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
+    .primary{background:var(--accent)}
+    .ghost{background:transparent;border:1px solid rgba(148,163,184,.3);color:var(--text)}
+    .danger{background:var(--danger)}
+    .muted{color:var(--muted);font-size:14px}
+    .result{border-left:4px solid var(--accent-2);padding-left:12px}
+    .pill{display:inline-block;padding:6px 10px;border:1px solid rgba(148,163,184,.25);border-radius:999px;margin-right:6px}
+    .footer{color:var(--muted);text-align:center;padding:24px 8px}
+    .badge{font-size:12px;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.25);padding:4px 8px;border-radius:999px}
+    .copy{background:var(--accent-2)}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>括的能力評価チェック｜タイプ診断</h1>
+    <p>IQ（論理）・ストーリー化（伝達）・EQ（共感）の3領域から、あなたの強みタイプを判定します。</p>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <div class="muted">回答方式：はい＝1点、どちらかといえばはい＝0.5点、いいえ＝0点</div>
+      <div class="actions" style="margin-top:10px">
+        <button id="answerAllYes" class="ghost" type="button">デモ用：全て「はい」にする</button>
+        <button id="clearAll" class="ghost" type="button">回答をクリア</button>
+      </div>
+    </div>
+
+    <form id="quiz" class="grid"></form>
+
+    <div class="card">
+      <div class="actions">
+        <button class="primary" id="submitBtn" type="button">診断する</button>
+        <button class="ghost" id="exportBtn" type="button">結果を画像にする（SNS用）</button>
+        <button class="copy" id="copyBtn" type="button">結果をコピー</button>
+        <span id="warn" class="muted"></span>
+      </div>
+    </div>
+
+    <div id="resultCard" class="card" style="display:none">
+      <div class="result">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <h2 id="typeTitle" style="margin:0">タイプ結果</h2>
+          <span class="badge" id="badge"></span>
+        </div>
+        <p id="typeCopy" style="font-weight:700"></p>
+        <p id="typeDesc"></p>
+        <div style="margin:10px 0">
+          <span class="pill" id="scoreIQ"></span>
+          <span class="pill" id="scoreST"></span>
+          <span class="pill" id="scoreEQ"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">© 2025 診断アプリ | GitHub Pages でホスト可能</div>
+  </div>
+
+  <script>
+    // ====== 質問データ ======
+    const data = [
+      {
+        key: 'IQ',
+        title: 'Ⅰ. IQ的能力（抽象化・具体化・論理性）',
+        items: [
+          '具体的な事例から共通点やパターンを見出せる',
+          '抽象的な概念を日常の例に置き換えて説明できる',
+          '問題を要素分解して整理できる',
+          '複数の情報を比較し、類似点・相違点を明確にできる',
+          '因果関係を筋道立てて説明できる',
+          '曖昧な情報の中から本質を抜き出せる',
+          '数字やデータをもとに合理的に判断できる',
+          '一度学んだ原理を応用して新しい問題を解ける',
+          '「なぜそうなるのか」を掘り下げて考えられる',
+          '複雑な問題を段階的にシンプルに整理できる',
+        ],
+      },
+      {
+        key: 'ST',
+        title: 'Ⅱ. ストーリー化（表現・伝達力）',
+        items: [
+          '聞き手を意識して話の構成を工夫できる',
+          '起承転結や問題→解決の流れを組み立てられる',
+          'データや事実をストーリーに自然に組み込める',
+          '抽象的な内容を例え話や比喩でわかりやすくできる',
+          '相手がイメージしやすい順序で情報を並べられる',
+          '限られた時間内に要点をまとめて話せる',
+          '相手の理解度に応じて説明のレベルを調整できる',
+          '話し言葉と書き言葉を使い分けられる',
+          '感情を込めて伝え、相手の注意を引きつけられる',
+          '議論や会議で複数の意見をまとめて提示できる',
+        ],
+      },
+      {
+        key: 'EQ',
+        title: 'Ⅲ. EQ的能力（共感・態度・人間関係力）',
+        items: [
+          '相手の立場や感情を察して対応できる',
+          '相手の意見を最後まで傾聴できる',
+          '不快な指摘を冷静に受け止められる',
+          '相手の努力や成果を言葉で認められる',
+          '適切なタイミングで励ましや感謝を伝えられる',
+          '自分の感情を整理し、適切に表現できる',
+          '批判的な内容でも相手を尊重して伝えられる',
+          '相手の文化的背景や価値観に配慮できる',
+          '対立が起きても建設的に収束させられる',
+          'チームの雰囲気をポジティブにする言動ができる',
+        ],
+      },
+    ];
+
+    const quiz = document.getElementById('quiz');
+
+    // ====== 質問の描画 ======
+    function render(){
+      quiz.innerHTML = '';
+      data.forEach((sec, idx) => {
+        const wrap = document.createElement('section');
+        wrap.className = 'section card';
+        wrap.innerHTML = `<h2>${sec.title}</h2>`;
+        sec.items.forEach((text, i) => {
+          const qid = `${sec.key}-${i}`;
+          const div = document.createElement('div');
+          div.className = 'q';
+          div.innerHTML = `
+            <p><strong>${i+1}.</strong> ${text}</p>
+            <div class="choices">
+              <label><input type="radio" name="${qid}" value="1" /> はい</label>
+              <label><input type="radio" name="${qid}" value="0.5" /> どちらかといえばはい</label>
+              <label><input type="radio" name="${qid}" value="0" /> いいえ</label>
+            </div>
+          `;
+          wrap.appendChild(div);
+        });
+        quiz.appendChild(wrap);
+      });
+    }
+
+    render();
+
+    // ====== 集計 ======
+    function calcScores(){
+      let totalCount = 0;
+      const scores = { IQ:0, ST:0, EQ:0 };
+      data.forEach(sec => {
+        sec.items.forEach((_, i) => {
+          const name = `${sec.key}-${i}`;
+          const checked = document.querySelector(`input[name="${name}"]:checked`);
+          if(checked){
+            scores[sec.key] += Number(checked.value);
+            totalCount++;
+          }
+        });
+      });
+      return { scores, totalCount };
+    }
+
+    function decideType(scores){
+      const {IQ, ST, EQ} = scores;
+      const arr = [
+        {key:'IQ', val:IQ},
+        {key:'ST', val:ST},
+        {key:'EQ', val:EQ},
+      ].sort((a,b)=>b.val-a.val);
+
+      const top = arr[0], second = arr[1], third = arr[2];
+      const diffTopSecond = top.val - second.val;
+
+      const types = {
+        IQ: {
+          title: 'IQ的能力タイプ（論理・分析型）',
+          copy: '論理で未来を切り拓くアナリストタイプ',
+          desc: '抽象と具体を行き来し、問題を分解し合理的に結論を導けます。新規課題の構造化や検証設計が強み。',
+          badge: 'Top: IQ'
+        },
+        ST: {
+          title: 'ストーリー化タイプ（伝達・表現型）',
+          copy: '伝える力で世界を変えるストーリーテラータイプ',
+          desc: '聞き手志向で構成し、比喩や順序設計でわかりやすく伝達。合意形成やプレゼンで真価を発揮。',
+          badge: 'Top: Story'
+        },
+        EQ: {
+          title: 'EQ的能力タイプ（共感・人間関係型）',
+          copy: '人をつなげる共感のリーダータイプ',
+          desc: '他者の感情を踏まえ建設的に収束。チームの心理的安全性を高め、関係資本を生かします。',
+          badge: 'Top: EQ'
+        },
+        BAL: {
+          title: 'バランス型（総合力）',
+          copy: '万能で柔軟なオールラウンダータイプ',
+          desc: '論理・伝達・共感のバランスが良好。状況に応じて最適役割を選べます。',
+          badge: 'Balanced'
+        },
+        DEV: {
+          title: 'デベロップ型（伸びしろ探索）',
+          copy: '得点分布から次の一手を特定',
+          desc: '強み候補はあるものの拮抗。最下位領域の重点トレーニングで総合力を一段引き上げましょう。',
+          badge: 'Develop'
+        }
+      };
+
+      // 判定ロジック：
+      // 1) トップが7点以上 & 他より高い → そのタイプ
+      // 2) 3領域が±1.0点以内で拮抗（かつ各5点以上）→ バランス型
+      // 3) 上記以外 → デベロップ型
+      const maxVal = top.val;
+      const minVal = third.val;
+      const closeAll = (Math.abs(IQ-ST) <= 1 && Math.abs(ST-EQ) <= 1 && Math.abs(IQ-EQ) <= 1);
+
+      if(maxVal >= 7 && diffTopSecond > 0){
+        return { kind: top.key, meta: types[top.key] };
+      } else if(closeAll && IQ >= 5 && ST >= 5 && EQ >= 5){
+        return { kind: 'BAL', meta: types.BAL };
+      } else {
+        return { kind: 'DEV', meta: types.DEV, weakest: third.key };
+      }
+    }
+
+    function showResult(scores, decision){
+      const card = document.getElementById('resultCard');
+      const t = decision.meta;
+      document.getElementById('typeTitle').textContent = t.title;
+      document.getElementById('typeCopy').textContent = '「' + t.copy + '」';
+      document.getElementById('typeDesc').textContent = t.desc;
+      document.getElementById('badge').textContent = t.badge;
+      document.getElementById('scoreIQ').textContent = `IQ：${scores.IQ.toFixed(1)} / 10`;
+      document.getElementById('scoreST').textContent = `ストーリー化：${scores.ST.toFixed(1)} / 10`;
+      document.getElementById('scoreEQ').textContent = `EQ：${scores.EQ.toFixed(1)} / 10`;
+
+      if(decision.kind === 'DEV' && decision.weakest){
+        const map = {IQ:'IQ（論理）', ST:'ストーリー化（伝達）', EQ:'EQ（共感）'};
+        const tip = `注目：${map[decision.weakest]}の強化で総合力が伸びます。`;
+        document.getElementById('typeDesc').textContent += ' ' + tip;
+      }
+
+      card.style.display = 'block';
+      card.scrollIntoView({behavior:'smooth'});
+    }
+
+    // ====== イベント ======
+    document.getElementById('submitBtn').addEventListener('click', () => {
+      const {scores, totalCount} = calcScores();
+      const totalQuestions = data.reduce((a,s)=>a+s.items.length,0);
+      const warn = document.getElementById('warn');
+      warn.textContent = '';
+      if(totalCount < totalQuestions){
+        warn.textContent = `未回答があります（回答：${totalCount}/${totalQuestions}）。精度向上のため全設問の回答をおすすめします。`;
+      }
+      const decision = decideType(scores);
+      showResult(scores, decision);
+    });
+
+    document.getElementById('answerAllYes').addEventListener('click', ()=>{
+      document.querySelectorAll('input[type=radio][value="1"]').forEach(el=> el.checked = true);
+    });
+
+    document.getElementById('clearAll').addEventListener('click', ()=>{
+      document.querySelectorAll('input[type=radio]').forEach(el=> el.checked = false);
+      document.getElementById('resultCard').style.display = 'none';
+      document.getElementById('warn').textContent = '';
+    });
+
+    // 結果コピー
+    document.getElementById('copyBtn').addEventListener('click', ()=>{
+      const scores = calcScores().scores;
+      const d = decideType(scores);
+      const lines = [
+        '括的能力評価チェック｜タイプ診断',
+        `タイプ：${d.meta.title}`,
+        `キャッチ：${d.meta.copy}`,
+        `IQ ${scores.IQ.toFixed(1)}/10 | ストーリー化 ${scores.ST.toFixed(1)}/10 | EQ ${scores.EQ.toFixed(1)}/10`,
+        '#診断 #自己理解'
+      ];
+      const txt = lines.join('\n');
+      navigator.clipboard.writeText(txt).then(()=>{
+        alert('結果テキストをコピーしました。Instagramの投稿やストーリーズに貼り付けてご利用ください。');
+      });
+    });
+
+    // 結果画像化（簡易実装：HTML2Canvasを使わない軽量版：新規ウィンドウへ印刷用デザイン生成）
+    document.getElementById('exportBtn').addEventListener('click', ()=>{
+      const {scores} = calcScores();
+      const d = decideType(scores);
+      const html = `
+        <html><head><meta charset='utf-8'><title>結果画像</title>
+        <style>
+          body{margin:0;display:grid;place-items:center;background:#0b1220;color:#fff;font-family:system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, \"Hiragino Kaku Gothic ProN\", \"Yu Gothic UI\", \"YuGothic\", \"Noto Sans JP\", sans-serif}
+          .img{width:1080px;height:1920px;background:linear-gradient(160deg,#111827,#0b1220);padding:80px 64px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between}
+          .title{font-size:56px;line-height:1.15;margin:0}
+          .copy{font-size:36px;opacity:.9;margin:0}
+          .pill{display:inline-block;border:1px solid #7aa2ff;border-radius:999px;padding:10px 16px;margin-right:10px;margin-top:10px}
+          .footer{opacity:.7}
+        </style></head>
+        <body>
+          <div class='img'>
+            <div>
+              <h1 class='title'>括的能力評価チェック</h1>
+              <h2 class='copy'>${d.meta.title}</h2>
+              <p class='copy'>「${d.meta.copy}」</p>
+            </div>
+            <div>
+              <div class='pill'>IQ：${scores.IQ.toFixed(1)} / 10</div>
+              <div class='pill'>ストーリー化：${scores.ST.toFixed(1)} / 10</div>
+              <div class='pill'>EQ：${scores.EQ.toFixed(1)} / 10</div>
+            </div>
+            <div class='footer'>#診断 #自己理解 | © 2025</div>
+          </div>
+          <script>window.onload=()=>window.print()</script>
+        </body></html>`;
+      const w = window.open('', '_blank');
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+    });
+  </script>
+</body>
+</html>
 
